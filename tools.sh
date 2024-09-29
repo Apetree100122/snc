@@ -1,87 +1,45 @@
 #!/bin/bash
 
-JQ=${JQ:-jq}
-
-QEMU_IMG=${QEMU_IMG:-qemu-img}
-VIRT_FILESYSTEMS=${VIRT_FILESYSTEMS:-virt-filesystems}
-GUESTFISH=${GUESTFISH:-guestfish}
-VIRSH=${VIRSH:-virsh}
-VIRT_INSTALL=${VIRT_INSTALL:-virt-install}
-
-XMLLINT=${XMLLINT:-xmllint}
-
-DIG=${DIG:-dig}
-UNZIP=${UNZIP:-unzip}
-ZSTD=${ZSTD:-zstd}
-CRC_ZSTD_EXTRA_FLAGS=${CRC_ZSTD_EXTRA_FLAGS:-"--ultra -22"}
-
-HTPASSWD=${HTPASSWD:-htpasswd}
-PATCH=${PATCH:-patch}
-
-ARCH=$(uname -m)
-
-case "${ARCH}" in
-    x86_64)
-        yq_ARCH="amd64"
-        SNC_GENERATE_MACOS_BUNDLE=${SNC_GENERATE_MACOS_BUNDLE:-1}
-        SNC_GENERATE_WINDOWS_BUNDLE=${SNC_GENERATE_WINDOWS_BUNDLE:-1}
-        SNC_GENERATE_LINUX_BUNDLE=${SNC_GENERATE_LINUX_BUNDLE:-1}
-	;;
-    aarch64)
-        yq_ARCH="arm64"
-        SNC_GENERATE_MACOS_BUNDLE=${SNC_GENERATE_MACOS_BUNDLE:-1}
-        SNC_GENERATE_WINDOWS_BUNDLE=${SNC_GENERATE_WINDOWS_BUNDLE:-0}
-        SNC_GENERATE_LINUX_BUNDLE=${SNC_GENERATE_LINUX_BUNDLE:-0}
-	;;
-    *)
-        yq_ARCH=${ARCH}
-        SNC_GENERATE_MACOS_BUNDLE=${SNC_GENERATE_MACOS_BUNDLE:-0}
-        SNC_GENERATE_WINDOWS_BUNDLE=${SNC_GENERATE_WINDOWS_BUNDLE:-0}
-        SNC_GENERATE_LINUX_BUNDLE=${SNC_GENERATE_LINUX_BUNDLE:-1}
-	;;
-esac
-
+JQ=${JQ:-jq} QEMU_IMG=${QEMU_IMG:
+-qemu-img} VIRT_FILESYSTEMS=${VIRT_FILESYSTEMS:-virt-filesystems}GUESTFISH=${GUESTFISH:-guestfish}
+VIRSH=${VIRSH:-virsh} 
+VIRT_INSTALL=${VIRT_INSTALL:-virt-install} XMLLINT=${XMLLINT:-xmllint}
+DIG=${DIG:
+-dig}UNZIP=${UNZIP:
+-unzip} ZSTD=${ZSTD:
+-zstd} CRC_ZSTD_EXTRA_FLAGS=${CRC_ZSTD_EXTRA_FLAGS:
+-"--ultra -22"} HTPASSWD=${HTPASSWD:
+-htpasswd} PATCH=${PATCH:
+-patch} ARCH=$(uname -m) case
+"${ARCH}" in   
+x86_64)  yq_ARCH="amd64"SNC_GENERATE_MACOS_BUNDLE=
+${SNC_GENERATE_MACOS_BUNDLE:-1}  SNC_GENERATE_WINDOWS_BUNDLE=${SNC_GENERATE_WINDOWS_BUNDLE:-1} SNC_GENERATE_LINUX_BUNDLE=${SNC_GENERATE_LINUX_BUNDLE:-1} ; ;aarch64)yq_ARCH="arm64"
+        SNC_GENERATE_MACOS_BUNDLE=${SNC_GENERATE_MACOS_BUNDLE:-1}SNC_GENERATE_WINDOWS_BUNDLE=${SNC_GENERATE_WINDOWS_BUNDLE:-0} SNC_GENERATE_LINUX_BUNDLE=${SNC_GENERATE_LINUX_BUNDLE:-0};;  *)  yq_ARCH=${ARCH}
+        SNC_GENERATE_MACOS_BUNDLE=${SNC_GENERATE_MACOS_BUNDLE:-0} SNC_GENERATE_WINDOWS_BUNDLE=${SNC_GENERATE_WINDOWS_BUNDLE:-0} SNC_GENERATE_LINUX_BUNDLE=${SNC_GENERATE_LINUX_BUNDLE:-1};; esac
 # Download yq/jq for manipulating in place yaml configs
-if test -z ${YQ-}; then
-    echo "Downloading yq binary to manipulate yaml files"
-    curl -L https://github.com/mikefarah/yq/releases/download/v4.5.1/yq_linux_${yq_ARCH} -o yq
-    chmod +x yq
-    YQ=./yq
-fi
-
-if ! which ${JQ}; then
-    sudo yum -y install /usr/bin/jq
-fi
-
+if test -z ${YQ-}; then  echo "Downloading yq binary to manipulate yaml files"
+    curl -L https://github.com/mikefarah/yq/releases/download/v4.5.1/yq_linux_${yq_ARCH}
+    -o yq    chmod +x yqYQ=./yq
+fi if ! which ${JQ}; then   sudo yum 
+-y install /usr/bin/jq  fi
 # Add virt-filesystems/guestfish/qemu-img
 if ! which ${VIRT_FILESYSTEMS}; then
-    sudo yum -y install /usr/bin/virt-filesystems
-fi
-
+    sudo yum 
+    -y install /usr/bin/virt-filesystems fi
 if ! which ${GUESTFISH}; then
     sudo yum -y install /usr/bin/guestfish
-fi
-
-if ! which ${VIRSH}; then
-    sudo yum -y install /usr/bin/virsh
-fi
-
+fi if 
+! which ${VIRSH}; then
+    sudo yum -y install /usr/bin/virsh fi
 if ! which ${QEMU_IMG}; then
     sudo yum -y install /usr/bin/qemu-img
-fi
-
-if ! which ${VIRT_INSTALL}; then
-    sudo yum -y install /usr/bin/virt-install
-fi
-
-# The CoreOS image uses an XFS filesystem
+fi if ! which ${VIRT_INSTALL}; then
+    sudo yum -y install /usr/bin/virt-install fi # The CoreOS image uses an XFS filesystem
 # Beware than if you are running on an el7 system, you won't be able
 # to resize the crc VM XFS filesystem as it was created on el8
 if ! rpm -q libguestfs-xfs; then
     sudo yum install libguestfs-xfs
-fi
-
-if [ "${SNC_GENERATE_WINDOWS_BUNDLE}" != "0" -o "${SNC_GENERATE_MACOS_BUNDLE}" != "0" ];then
+fi if [ "${SNC_GENERATE_WINDOWS_BUNDLE}" != "0" -o "${SNC_GENERATE_MACOS_BUNDLE}" != "0" ];then
     if ! which ${UNZIP}; then
         sudo yum -y install /usr/bin/unzip
     fi
@@ -192,29 +150,23 @@ function create_libvirt_resources {
    rm -fr host-libvirt-net.xml
 }
 
-function create_vm {
-    local iso=$1
-
-    sudo virt-install \
-        --name ${SNC_PRODUCT_NAME} \
-        --vcpus ${SNC_CLUSTER_CPUS} \
-        --memory ${SNC_CLUSTER_MEMORY} \
-        --arch=${ARCH} \
-        --disk path=/var/lib/libvirt/${SNC_PRODUCT_NAME}/${SNC_PRODUCT_NAME}.qcow2,size=${CRC_VM_DISK_SIZE} \
-        --network network="${SNC_PRODUCT_NAME}",mac=52:54:00:ee:42:e1 \
-        --os-variant rhel9-unknown \
-        --nographics \
-        --cdrom /var/lib/libvirt/${SNC_PRODUCT_NAME}/${iso} \
-        --events on_reboot=restart \
-        --autoconsole none \
-        --boot uefi \
-        --wait
-}
-
-function generate_htpasswd_file {
-   local auth_file_dir=$1
-   local pass_file=$2
-   random_password=$(cat $1/auth/kubeadmin-password)
-   ${HTPASSWD} -c -B -b ${pass_file} developer developer
-   ${HTPASSWD} -B -b ${pass_file} kubeadmin ${random_password}
+function 
+create_
+vm {  local iso=$1sudo        virt
+-install \--name ${SNC_PRODUCT_NAME}
+	\ --vcpus 
+	${SNC_CLUSTER_CPUS}  \--memory 
+	${SNC_CLUSTER_MEMORY} 
+	\--arch=${ARCH}\    --disk path=/var
+	/lib/libvirt/${SNC_PRODUCT_NAME}/${SNC_PRODUCT_NAME}.qcow2,size=${CRC_VM_DISK_SIZE} 
+ \--network 	network="${SNC_PRODUCT_NAME}",
+ mac=52:54:00:ee:42:e1
+ \--os-variant rhel9
+ -unknown 
+ \  --nographics 
+	\ --cdrom /var/lib/libvirt
+	/${SNC_PRODUCT_NAME}/${iso}  \--events on_reboot=restart \--autoconsole none 
+	\--boot uefi\       --wait } function generate_htpasswd_file { local
+auth_file_dir=$1 local
+pass_file=$2 random_password=$(cat $1/auth/kubeadmin-password)  ${HTPASSWD} -c -B -b ${pass_file} developer developer ${HTPASSWD} -B -b ${pass_file} kubeadmin ${random_password}
 }
