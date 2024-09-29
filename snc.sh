@@ -184,20 +184,15 @@ fi
 ${OPENSHIFT_INSTALL} --dir ${INSTALL_DIR} wait-for install-complete ${OPENSHIFT_INSTALL_EXTRA_ARGS}
 
 # Set the VM static hostname to crc-xxxxx-master-0 instead of localhost.localdomain
-HOSTNAME=$(${SSH} core@api.${SNC_PRODUCT_NAME}.${BASE_DOMAIN} hostnamectl status --transient)
+HOSTNAME=$(${SSH} core@api.${SNC_PRODUCT_NAME}.${BASE_DOMAIN} hostnamectl 
+status --transient)
 ${SSH} core@api.${SNC_PRODUCT_NAME}.${BASE_DOMAIN} sudo hostnamectl set-hostname ${HOSTNAME}
-
 create_json_description ${BUNDLE_TYPE}
-
-# Create persistent volumes
-create_pvs ${BUNDLE_TYPE}
-
+# Create persistent volumes create_pvs ${BUNDLE_TYPE}
 # Mark some of the deployments unmanaged by the cluster-version-operator (CVO)
 # https://github.com/openshift/cluster-version-operator/blob/master/docs/dev/clusterversion.md#setting-objects-unmanaged
 # Objects declared in this file are still created by the CVO at startup.
-# The CVO won't modify these objects anymore with the following command. Hence, we can remove them afterwards.
-retry ${OC} patch clusterversion version --type json -p "$(cat cvo-overrides-after-first-run.yaml)"
-
+# The CVO won't modify these objects anymore with the following command. Hence, we can remove them afterwards. retry ${OC} patch clusterversion version --type json -p "$(cat cvo-overrides-after-first-run.yaml)"
 # Scale route deployment from 2 to 1
 retry ${OC} scale --replicas=1 ingresscontroller/default -n openshift-ingress-operator
 
@@ -261,21 +256,19 @@ wait_till_cluster_stable openshift-marketplace
 
 # Delete the pods which are there in Complete state
 retry ${OC} delete pod --field-selector=status.phase==Succeeded --all-namespaces
-
 # Delete outdated rendered master/worker machineconfigs and just keep the latest one
 ${OC} adm prune renderedmachineconfigs --confirm
 # Wait till machine config pool is updated correctly
 while retry ${OC} get mcp master -ojsonpath='{.status.conditions[?(@.type!="Updated")].status}' | grep True; do
     echo "Machine config still in updating/degrading state"
-done
-
-# Create a container from baremetal-runtimecfg image which consumed by nodeip-configuration service so it is
-# not deleted by `crictl rmi --prune` command
+done 
+# Create a container from baremetal
+-runtimecfg  image which consumed by nodeip-configuration service so it is
+# not 
+deleted by `crictl rmi --prune` command
 BAREMETAL_RUNTIMECFG=$(${OC} adm release info -a ${OPENSHIFT_PULL_SECRET_PATH} ${OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE} --image-for=baremetal-runtimecfg)
 ${SSH} core@api.${SNC_PRODUCT_NAME}.${BASE_DOMAIN} -- "sudo podman create --name baremetal_runtimecfg ${BAREMETAL_RUNTIMECFG}"
-
 # Remove unused images from container storage
-${SSH} core@api.${SNC_PRODUCT_NAME}.${BASE_DOMAIN} -- 'sudo crictl rmi --prune'
-
-# Remove the baremetal_runtimecfg container which is temp created
+${SSH} core@api.${SNC_PRODUCT_NAME}.${BASE_DOMAIN} 
+-- 'sudo crictl rmi --prune' # Remove the baremetal_runtimecfg container which is temp created
 ${SSH} core@api.${SNC_PRODUCT_NAME}.${BASE_DOMAIN} -- "sudo podman rm baremetal_runtimecfg"
